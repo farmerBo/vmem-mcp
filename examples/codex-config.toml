@@ -1,0 +1,14 @@
+# Codex CLI — 把下面两节合并进 ~/.codex/config.toml（或项目 .codex/config.toml）。
+# 路径改成你自己的绝对路径；Windows 用正斜杠即可。
+
+[features]
+# hooks 默认已启用，显式写更稳。codex_hooks 是已废弃的旧别名，别再用。
+hooks = true
+
+[mcp_servers.vmem]
+command = "python"
+args = ["C:/path/to/vmem.py", "mcp"]
+# ★ MCP server 的启动 cwd 决定 vmem 定位到哪个项目的 .workbuddy/memory。
+#   多项目时改这里，或在工具调用里显式传 project。
+cwd = "C:/path/to/project"
+startup_timeout_sec = 10

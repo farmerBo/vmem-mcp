@@ -27,20 +27,34 @@ vmem 把这条共识里**必需的那半边**做成零依赖实现。`search_db(
 vmem.db                  ← SQLite + FTS5 trigram；可随时 rebuild 的索引
         │  search / hook-inject
         ▼
-MCP 工具  ·  SessionStart systemMessage  ·  CLI
+MCP 工具  ·  SessionStart hook-inject(additionalContext)  ·  CLI
 ```
 
 每条记录都带 `source`（文件:行号）与标题面包屑，回答可回溯原文。
 
 ## 安装
 
-适用于任何支持 MCP + hooks 的客户端（WorkBuddy、Claude Code、Codex 等）。以 WorkBuddy 为例：
+三层能力里 **MCP 是通用的**（`vmem.py` 是标准 stdio JSON-RPC），hook 与 skill 则各有各的配置格式，**不能把 WorkBuddy 的配置原样拷给 Codex**。
+
+| 客户端 | MCP server 配置 | SessionStart hook | skill 纪律 |
+|---|---|---|---|
+| WorkBuddy | `~/.workbuddy/mcp.json`（JSON） | `~/.workbuddy/settings.json` → `hooks.SessionStart` | `~/.workbuddy/skills/vmem/SKILL.md` |
+| Claude Code | `~/.claude.json` 或项目 `.mcp.json`（JSON） | `~/.claude/settings.json` → `hooks.SessionStart` | `~/.claude/skills/vmem/SKILL.md` |
+| Codex CLI | `~/.codex/config.toml` → `[mcp_servers.vmem]`（TOML） | `~/.codex/hooks.json` | ⚠️ 用 `skill.toml` + `instructions.md`，**SKILL.md 不能直接用** |
+
+**WorkBuddy / Claude Code**（hook 格式相同）：
 
 1. 把 `vmem.py` 放到任意固定目录。
-2. 在 `~/.workbuddy/mcp.json` 合并 [`examples/mcp.json`](examples/mcp.json) 的内容，把路径改成你自己的。
-3. 在连接器管理页右上角「自定义连接器」里对 `vmem` 点一次「信任」（新 MCP 不会自动激活）。
-4. 把 [`examples/sessionstart-hook.json`](examples/sessionstart-hook.json) 这条命令**追加**到 `~/.workbuddy/settings.json` 的 `hooks.SessionStart` 数组，不要覆盖已有钩子。
+2. 合并 [`examples/mcp.json`](examples/mcp.json) 到对应的 MCP 配置文件，把路径改成你自己的。
+3. WorkBuddy 需在连接器管理页右上角「自定义连接器」里对 `vmem` 点一次「信任」（新 MCP 不会自动激活）。
+4. 把 [`examples/sessionstart-hook.json`](examples/sessionstart-hook.json) 这条命令**追加**到 `settings.json` 的 `hooks.SessionStart` 数组，不要覆盖已有钩子。
 5. 可选：把 [`skill/SKILL.md`](skill/SKILL.md) 复制为用户级 skill，用于约束 AI「何时必查、何时写回、结果必须带出处」。
+
+**Codex CLI**：用 [`examples/codex-config.toml`](examples/codex-config.toml) 和 [`examples/codex-hooks.json`](examples/codex-hooks.json)。三点差异：配置是 TOML、hook 单独放 `hooks.json`、非 managed hook 要在 `/hooks` 里 trust 一次（改过命令会要求重新 trust）。skill 那层可以直接跳过 —— MCP + hook 已经够用，不必强行移植。
+
+★ **hook 输出契约**：`hook-inject` 同时输出 `systemMessage`（一句短提示）和 `hookSpecificOutput.additionalContext`（记忆正文）。Claude Code / Codex 里 `systemMessage` 只是给用户看的 UI 警告，**只有 `additionalContext` 会进模型上下文**；早期版本只输出 `systemMessage`，等于没注入，v0.2.1 已修。
+
+**共同前提**：Python 3.9+ 且 SQLite 带 FTS5 `trigram`；记忆原文放在项目的 `.workbuddy/memory/*.md`（别的目录用 `VMEM_MEMORY_DIR` 覆盖）；**MCP server 的启动 cwd 决定项目归属**，多项目时给 server 配 `cwd` 或在工具调用里显式传 `project`。
 
 首次建索引：
 
@@ -62,7 +76,7 @@ python vmem.py search "config_key 超时" -k 5 --cwd /path/to/project
 | `add --text TEXT [--kind K]` | 追加当日 `.md` 并入库，用于口头约定 / 临时拍板 |
 | `get ID` | 取某条完整原文 |
 | `stats` | 块数 / 文件数 / 类型分布 / db 大小 |
-| `hook-inject [--budget 2600]` | 给 `SessionStart` 用，输出 `{"continue","systemMessage"}` |
+| `hook-inject [--budget 2600]` | 给 `SessionStart` 用，输出 `{"continue","systemMessage","hookSpecificOutput.additionalContext"}` |
 | `rebuild` | 等价于 `index --force` |
 
 所有命令都支持 `--cwd` 指定工作区、`--project` 显式指定项目 id。找不到 `.workbuddy` 时会回退到注册表里最近使用的项目。

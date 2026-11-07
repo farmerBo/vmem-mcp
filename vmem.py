@@ -8,11 +8,13 @@
       ⇒ 技术记忆里全是精确 token（version tag / config_key / error_code），
         纯向量会把它们糊掉，所以精确检索是硬性底座；RRF 接口预留但默认不启用向量
   · 结果必须带 source(文件:行号) + 标题面包屑，能回溯原文
-  · 不靠模型自觉：SessionStart hook 先增量索引，再用 systemMessage 自动注入
+  · 不靠模型自觉：SessionStart hook 先增量索引，再用 hookSpecificOutput.additionalContext 注入
   · 零第三方依赖，仅 Python 标准库（需 SQLite 带 FTS5 + trigram，Python 3.9+ 一般都有）
 
 v0.2 (2026-11-07)：hook 增量索引闭环、AND 优先排序、heading 加权、
                     synchronous=NORMAL / busy_timeout、VMEM_HOME 可覆盖。
+v0.2.1 (2026-11-07)：hook 注入改走 hookSpecificOutput.additionalContext
+                    （systemMessage 只给用户看，不进模型上下文）；补 Codex 配置示例。
 
 子命令：
   mcp                         启动 MCP server（stdio JSON-RPC）
@@ -21,7 +23,8 @@ v0.2 (2026-11-07)：hook 增量索引闭环、AND 优先排序、heading 加权�
   add --text TEXT [--kind K] [--tags a,b] [--project P]
   get ID [--project P]
   stats [--project P] [--all] [--json]
-  hook-inject [--budget 2600]     给 SessionStart hook 用，输出 {"continue","systemMessage"}
+  hook-inject [--budget 2600]     给 SessionStart hook 用，输出 {"continue","systemMessage",
+                                  "hookSpecificOutput":{"hookEventName","additionalContext"}}
   rebuild [--project P]           等价于 index --force
 """
 import os
@@ -501,7 +504,15 @@ def cmd_hook_inject(args):
     txt = inject_text(ws, args.budget)
     out = {'continue': True}
     if txt:
-        out['systemMessage'] = txt
+        event = payload.get('hook_event_name') or 'SessionStart'
+        # ★ 双客户端契约：Claude Code / Codex 里 systemMessage 只是给用户看的 UI 警告，
+        #   真正进模型上下文的是 hookSpecificOutput.additionalContext。
+        #   正文只放 additionalContext；systemMessage 留一句短提示，兼容只认它的旧实现。
+        out['systemMessage'] = 'vmem: 已注入 %d 字符项目记忆 (%s)' % (len(txt), project)
+        out['hookSpecificOutput'] = {
+            'hookEventName': event,
+            'additionalContext': txt,
+        }
     print(json.dumps(out, ensure_ascii=False))
     return 0
 
@@ -571,7 +582,7 @@ def mcp_loop():
         if method == 'initialize':
             result = {'protocolVersion': MCP_PROTO,
                       'capabilities': {'tools': {}},
-                      'serverInfo': {'name': 'vmem', 'version': '0.2.0'}}
+                      'serverInfo': {'name': 'vmem', 'version': '0.2.1'}}
         elif method == 'tools/list':
             result = {'tools': TOOLS}
         elif method == 'tools/call':

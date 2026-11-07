@@ -58,9 +58,13 @@ python /path/to/vmem.py stats   --cwd /path/to/project
 
 ## 自动注入
 
-`SessionStart` hook 挂 `vmem.py hook-inject`，输出 `{"continue":true,"systemMessage":...}`，
-把「核心铁律 + 最近条目」按 ≤2600 字符预算注入会话上下文。这一步不依赖 AI 自觉，
-且会先做一次静默增量索引。关闭方式：从 `settings.json` 的 `SessionStart` 数组移除该条。
+`SessionStart` hook 挂 `vmem.py hook-inject`：先静默增量索引，再把「核心铁律 + 最近条目」
+按 ≤2600 字符预算输出为 `{"continue":true,"systemMessage":短提示,
+"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":正文}}`。
+★ **正文进模型上下文靠 `additionalContext`**；`systemMessage` 在 Claude Code / Codex 里只是
+UI 警告，早期 v0.2 只输出它等于没注入。WorkBuddy / Claude Code 用 `settings.json` 的
+`hooks.SessionStart`；Codex 用 `~/.codex/hooks.json`（改过 hook 要重新 trust）。
+关闭方式：从对应配置的 `SessionStart` 数组移除该条。
 
 ## 排障
 

@@ -1,5 +1,5 @@
 {
-  "_comment": "这是 ~/.workbuddy/settings.json 中 hooks.SessionStart 数组的一个元素，不是完整文件。请追加到已有数组，不要覆盖其它钩子。timeout 单位秒；hook-inject 会先静默增量索引，再输出一行 JSON。",
+  "_comment": "WorkBuddy 用 ~/.workbuddy/settings.json、Claude Code 用 ~/.claude/settings.json，两者都是 hooks.SessionStart 数组的一个元素（不是完整文件）。Codex 格式不同，见 codex-hooks.json。请追加到已有数组，不要覆盖其它钩子。timeout 单位秒；hook-inject 会先静默增量索引，再输出一行 JSON（正文在 hookSpecificOutput.additionalContext）。",
   "matcher": "startup",
   "hooks": [
     {

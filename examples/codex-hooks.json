@@ -1,0 +1,17 @@
+{
+  "description": "vmem: auto-inject project memory at session start. Replace the paths. After adding or editing a hook, run /hooks in Codex to trust it again.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact|fork",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python C:/path/to/vmem.py hook-inject",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}
