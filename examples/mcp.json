@@ -1,0 +1,9 @@
+{
+  "_comment": "把下面 vmem 这一节合并进 ~/.workbuddy/mcp.json 的 mcpServers，并把 vmem.py 路径改成你自己的绝对路径。Windows 路径建议用正斜杠或双反斜杠。新 server 需在连接器管理页手动点一次「信任」才会激活。",
+  "mcpServers": {
+    "vmem": {
+      "command": "python",
+      "args": ["C:/path/to/vmem.py", "mcp"]
+    }
+  }
+}

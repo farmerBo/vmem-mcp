@@ -1,0 +1,11 @@
+{
+  "_comment": "这是 ~/.workbuddy/settings.json 中 hooks.SessionStart 数组的一个元素，不是完整文件。请追加到已有数组，不要覆盖其它钩子。timeout 单位秒；hook-inject 会先静默增量索引，再输出一行 JSON。",
+  "matcher": "startup",
+  "hooks": [
+    {
+      "type": "command",
+      "command": "python C:/path/to/vmem.py hook-inject",
+      "timeout": 10
+    }
+  ]
+}
